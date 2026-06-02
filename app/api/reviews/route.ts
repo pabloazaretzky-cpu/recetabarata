@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
   }
   if (!isSupabaseConfigured) return NextResponse.json([]);
 
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from("reviews")
     .select("*")
     .eq("recipe_id", recipeId)
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Rating debe ser entre 1 y 5" }, { status: 400 });
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await supabase!
     .from("reviews")
     .insert([{ recipe_id, author_name: author_name.trim(), rating, comment: comment?.trim() || null }])
     .select()
