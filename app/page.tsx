@@ -5,7 +5,7 @@ import type { RatingStats } from "@/lib/types";
 
 async function fetchRatingsMap(): Promise<Record<string, RatingStats>> {
   if (!isSupabaseConfigured) return {};
-  const { data } = await supabase.from("reviews").select("recipe_id, rating");
+  const { data } = await supabase!.from("reviews").select("recipe_id, rating");
   if (!data) return {};
   const acc: Record<string, { sum: number; count: number }> = {};
   for (const row of data) {
