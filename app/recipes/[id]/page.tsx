@@ -18,13 +18,16 @@ export async function generateMetadata(
   const recipe = getRecipeById(id);
   if (!recipe) return {};
 
+  const categoryName = getCategoryById(recipe.category).name;
   const title = `${recipe.name} — ${SITE_NAME}`;
-  const description = `${recipe.description} Compara los ingredientes en Mercadona, Carrefour, Lidl, Dia y Alcampo para ahorrar en tu compra.`;
+  const totalTime = recipe.prepTime + recipe.cookTime;
+  const description = `${recipe.description} Lista de ${recipe.ingredients.length} ingredientes con precios en Mercadona, Carrefour y Lidl. Listo en ${totalTime} min.`;
   const url = `${SITE_URL}/recipes/${recipe.id}`;
 
   return {
     title,
     description,
+    keywords: [recipe.name, ...recipe.tags, categoryName, "receta barata", "precio supermercado", "lista de compras"],
     alternates: { canonical: url },
     openGraph: {
       title: recipe.name,
@@ -66,41 +69,63 @@ export default async function RecipeDetailPage(
   const totalTime = recipe.prepTime + recipe.cookTime;
   const rating = await fetchRecipeRating(recipe.id);
   const categoryName = getCategoryById(recipe.category).name;
+  const url = `${SITE_URL}/recipes/${recipe.id}`;
 
-  const jsonLd: Record<string, unknown> = {
+  const suitableForDiet =
+    recipe.category === "vegana"
+      ? ["https://schema.org/VeganDiet", "https://schema.org/VegetarianDiet"]
+      : recipe.tags.includes("vegetariano")
+      ? ["https://schema.org/VegetarianDiet"]
+      : undefined;
+
+  const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "Recipe",
-    name: recipe.name,
-    description: recipe.description,
-    image: recipe.image,
-    url: `${SITE_URL}/recipes/${recipe.id}`,
-    author: { "@type": "Organization", name: SITE_NAME },
-    prepTime: `PT${recipe.prepTime}M`,
-    cookTime: recipe.cookTime > 0 ? `PT${recipe.cookTime}M` : undefined,
-    totalTime: `PT${totalTime}M`,
-    recipeYield: `${recipe.baseServings} ${recipe.baseServings === 1 ? "porción" : "porciones"}`,
-    recipeCategory: categoryName,
-    nutrition: {
-      "@type": "NutritionInformation",
-      calories: `${recipe.calories} kcal`,
-    },
-    recipeIngredient: recipe.ingredients.map(
-      (ing) => `${formatAmount(ing.amount, ing.unit)} de ${ing.name}`
-    ),
-    recipeInstructions: recipe.steps.map((text, i) => ({
-      "@type": "HowToStep",
-      position: i + 1,
-      text,
-    })),
-    ...(rating && {
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: rating.avg.toFixed(1),
-        reviewCount: rating.count,
-        bestRating: "5",
-        worstRating: "1",
+    "@graph": [
+      {
+        "@type": "Recipe",
+        name: recipe.name,
+        description: recipe.description,
+        image: recipe.image,
+        url,
+        author: { "@type": "Organization", name: SITE_NAME },
+        datePublished: "2025-01-01",
+        prepTime: `PT${recipe.prepTime}M`,
+        cookTime: recipe.cookTime > 0 ? `PT${recipe.cookTime}M` : undefined,
+        totalTime: `PT${totalTime}M`,
+        recipeYield: `${recipe.baseServings} ${recipe.baseServings === 1 ? "porción" : "porciones"}`,
+        recipeCategory: categoryName,
+        ...(suitableForDiet && { suitableForDiet }),
+        nutrition: {
+          "@type": "NutritionInformation",
+          calories: `${recipe.calories} kcal`,
+        },
+        recipeIngredient: recipe.ingredients.map(
+          (ing) => `${formatAmount(ing.amount, ing.unit)} de ${ing.name}`
+        ),
+        recipeInstructions: recipe.steps.map((text, i) => ({
+          "@type": "HowToStep",
+          position: i + 1,
+          text,
+        })),
+        ...(rating && {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: rating.avg.toFixed(1),
+            reviewCount: rating.count,
+            bestRating: "5",
+            worstRating: "1",
+          },
+        }),
       },
-    }),
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Inicio", item: SITE_URL },
+          { "@type": "ListItem", position: 2, name: "Recetas", item: SITE_URL },
+          { "@type": "ListItem", position: 3, name: recipe.name, item: url },
+        ],
+      },
+    ],
   };
 
   return (

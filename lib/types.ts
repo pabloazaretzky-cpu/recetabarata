@@ -64,6 +64,31 @@ export interface AggregatedIngredient extends Ingredient {
   scaledAmount: number;
 }
 
+export type MealType = "desayuno" | "almuerzo" | "cena" | "snack";
+
+export type WeekDay =
+  | "lunes"
+  | "martes"
+  | "miercoles"
+  | "jueves"
+  | "viernes"
+  | "sabado"
+  | "domingo";
+
+export type NutritionalGoal =
+  | "libre"
+  | "bajo-calorias"
+  | "alto-proteina"
+  | "vegano"
+  | "mediterraneo";
+
+export interface MealSlot {
+  day: WeekDay;
+  meal: MealType;
+  recipeId: string;
+  servings: number;
+}
+
 export interface Review {
   id: string;
   recipe_id: string;

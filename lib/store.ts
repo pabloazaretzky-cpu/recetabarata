@@ -11,6 +11,7 @@ interface CartStore {
   updateServings: (recipeId: string, servings: number) => void;
   isInCart: (recipeId: string) => boolean;
   clear: () => void;
+  replaceAll: (items: CartItem[]) => void;
 }
 
 export const useCartStore = create<CartStore>()(
@@ -46,7 +47,9 @@ export const useCartStore = create<CartStore>()(
       isInCart: (recipeId) => get().items.some((i) => i.recipeId === recipeId),
 
       clear: () => set({ items: [] }),
+
+      replaceAll: (items) => set({ items }),
     }),
-    { name: "recetas-cart" }
+    { name: "recetafacil-cart" }
   )
 );

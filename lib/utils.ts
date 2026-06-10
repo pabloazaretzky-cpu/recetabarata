@@ -2,6 +2,7 @@ import type {
   AggregatedIngredient,
   CartItem,
   Ingredient,
+  Recipe,
   SupermarketId,
   SupermarketResult,
 } from "@/lib/types";
@@ -94,6 +95,14 @@ export function getSmIngredientBreakdown(
       return { id: ing.id, name: ing.name, cost: baseCost * multipliers[ing.category] };
     })
     .filter((item) => item.cost > 0);
+}
+
+export function estimateRecipeCost(recipe: Recipe, servings: number): number {
+  const multiplier = servings / recipe.baseServings;
+  return recipe.ingredients.reduce(
+    (sum, ing) => sum + calcIngredientCost(ing, ing.amount * multiplier),
+    0
+  );
 }
 
 export function formatPrice(price: number): string {

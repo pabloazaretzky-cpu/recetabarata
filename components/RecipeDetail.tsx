@@ -17,6 +17,7 @@ import {
 import type { Recipe, Review } from "@/lib/types";
 import { getCategoryById } from "@/lib/data/categories";
 import { useCartStore } from "@/lib/store";
+import { useSettingsStore } from "@/lib/settings-store";
 import ServingsSelector from "@/components/ServingsSelector";
 import { calcIngredientCost, calcSupermarketPrices, formatAmount, formatPrice, getSmIngredientBreakdown } from "@/lib/utils";
 import type { SupermarketId } from "@/lib/types";
@@ -36,7 +37,8 @@ const difficultyColor = {
 };
 
 export default function RecipeDetail({ recipe }: Props) {
-  const [servings, setServings] = useState(recipe.baseServings);
+  const { defaultServings } = useSettingsStore();
+  const [servings, setServings] = useState(() => defaultServings);
   const { addRecipe, removeRecipe, isInCart } = useCartStore();
   const inCart = isInCart(recipe.id);
   const category = getCategoryById(recipe.category);

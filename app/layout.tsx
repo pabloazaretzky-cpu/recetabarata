@@ -9,11 +9,21 @@ const geistSans = Geist({
   subsets: ["latin"],
 });
 
+const SITE_DESCRIPTION =
+  "Descubre recetas deliciosas y compara precios en Mercadona, Carrefour, Lidl, Alcampo y Dia para ahorrar en tu compra.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: "RecetaFácil — Cocina bien y gasta menos",
-  description:
-    "Descubre recetas deliciosas y compara precios en Mercadona, Carrefour, Lidl, Alcampo y Dia para ahorrar en tu compra.",
+  description: SITE_DESCRIPTION,
+  keywords: [
+    "recetas baratas",
+    "recetas económicas",
+    "comparar precios supermercado",
+    "recetas Mercadona",
+    "recetas fáciles España",
+    "lista de compras barata",
+  ],
   openGraph: {
     siteName: SITE_NAME,
     locale: "es_ES",
@@ -24,6 +34,14 @@ export const metadata: Metadata = {
   },
 };
 
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: SITE_NAME,
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -32,6 +50,10 @@ export default function RootLayout({
   return (
     <html lang="es" className={`${geistSans.variable} h-full`}>
       <body className="min-h-full bg-stone-50 antialiased">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
         <Header />
         <main>{children}</main>
       </body>
