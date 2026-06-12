@@ -4,6 +4,7 @@ import { recipesExtra2 } from "./recipes_extra2";
 import { recipesExtra3 } from "./recipes_extra3";
 import { recipesExtra4 } from "./recipes_extra4";
 import { recipesExtra5 } from "./recipes_extra5";
+import { recipesExtra6 } from "./recipes_extra6";
 
 const _baseRecipes: Recipe[] = [
   // ───────────────── RÁPIDAS ─────────────────
@@ -996,6 +997,7 @@ export const recipes: Recipe[] = [
   ...recipesExtra3,
   ...recipesExtra4,
   ...recipesExtra5,
+  ...recipesExtra6,
 ];
 
 export function getRecipeById(id: string): Recipe | undefined {
