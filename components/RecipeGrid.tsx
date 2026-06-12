@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Search, X } from "lucide-react";
+import { useState, useRef } from "react";
+import { Search, X, Plus } from "lucide-react";
 import RecipeCard from "@/components/RecipeCard";
 import { categories } from "@/lib/data/categories";
 import type { Recipe, CategoryId, RatingStats, Difficulty } from "@/lib/types";
@@ -54,6 +54,12 @@ function hasAllergen(recipe: Recipe, allergy: AllergyFilter): boolean {
   );
 }
 
+function countIngredientMatches(recipe: Recipe, selected: string[]): number {
+  return selected.filter((s) =>
+    recipe.ingredients.some((ing) => ing.name.toLowerCase().includes(s.toLowerCase()))
+  ).length;
+}
+
 function isHighProtein(recipe: Recipe): boolean {
   return (
     recipe.ingredients.some((ing) => ing.category === "carnes" || ing.category === "pescados") ||
@@ -74,6 +80,9 @@ export default function RecipeGrid({ recipes, ratingsMap = {} }: Props) {
   const [nutritionFilter, setNutritionFilter] = useState<NutritionFilter | null>(null);
   const [allergies, setAllergies] = useState<Set<AllergyFilter>>(new Set());
   const [sortBy, setSortBy] = useState<SortBy | null>(null);
+  const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
+  const [ingredientInput, setIngredientInput] = useState("");
+  const ingredientInputRef = useRef<HTMLInputElement>(null);
 
   function toggleCategory(id: CategoryId) {
     setActiveCategory((prev) => (prev === id ? "all" : id));
@@ -87,8 +96,21 @@ export default function RecipeGrid({ recipes, ratingsMap = {} }: Props) {
     });
   }
 
+  function addIngredient() {
+    const val = ingredientInput.trim().toLowerCase();
+    if (val && !selectedIngredients.includes(val)) {
+      setSelectedIngredients((prev) => [...prev, val]);
+    }
+    setIngredientInput("");
+    ingredientInputRef.current?.focus();
+  }
+
+  function removeIngredient(ing: string) {
+    setSelectedIngredients((prev) => prev.filter((i) => i !== ing));
+  }
+
   const hasFilters =
-    activeCategory !== "all" || search || timeFilter || diffFilter || nutritionFilter || allergies.size > 0 || sortBy;
+    activeCategory !== "all" || search || timeFilter || diffFilter || nutritionFilter || allergies.size > 0 || sortBy || selectedIngredients.length > 0;
 
   function clearAll() {
     setActiveCategory("all");
@@ -98,6 +120,8 @@ export default function RecipeGrid({ recipes, ratingsMap = {} }: Props) {
     setNutritionFilter(null);
     setAllergies(new Set());
     setSortBy(null);
+    setSelectedIngredients([]);
+    setIngredientInput("");
   }
 
   const filtered = recipes
@@ -105,7 +129,8 @@ export default function RecipeGrid({ recipes, ratingsMap = {} }: Props) {
       const totalTime = r.prepTime + r.cookTime;
       if (activeCategory !== "all" && r.category !== activeCategory) return false;
       if (search.trim() && !r.name.toLowerCase().includes(search.toLowerCase()) &&
-          !r.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()))) return false;
+          !r.tags.some((t) => t.toLowerCase().includes(search.toLowerCase())) &&
+          !r.ingredients.some((ing) => ing.name.toLowerCase().includes(search.toLowerCase()))) return false;
       if (timeFilter === "rapido" && totalTime > 20) return false;
       if (timeFilter === "medio" && (totalTime <= 20 || totalTime > 45)) return false;
       if (timeFilter === "largo" && totalTime <= 45) return false;
@@ -115,9 +140,14 @@ export default function RecipeGrid({ recipes, ratingsMap = {} }: Props) {
       for (const allergy of allergies) {
         if (hasAllergen(r, allergy)) return false;
       }
+      if (selectedIngredients.length > 0 && countIngredientMatches(r, selectedIngredients) === 0) return false;
       return true;
     })
     .sort((a, b) => {
+      if (selectedIngredients.length > 0) {
+        const diff = countIngredientMatches(b, selectedIngredients) - countIngredientMatches(a, selectedIngredients);
+        if (diff !== 0) return diff;
+      }
       if (!sortBy) return 0;
       const ra = ratingsMap[a.id] ?? { avg: 0, count: 0 };
       const rb = ratingsMap[b.id] ?? { avg: 0, count: 0 };
@@ -159,6 +189,45 @@ export default function RecipeGrid({ recipes, ratingsMap = {} }: Props) {
           onChange={(e) => setSearch(e.target.value)}
           className="w-full pl-12 pr-4 py-3 rounded-xl border border-stone-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400 text-stone-900 placeholder-stone-400"
         />
+      </div>
+
+      {/* Ingredient search */}
+      <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4 mb-3">
+        <p className="text-xs font-semibold text-orange-700 mb-2">¿Qué tengo en casa?</p>
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center gap-1 border border-orange-200 rounded-full px-3 py-1.5 bg-white">
+            <input
+              ref={ingredientInputRef}
+              type="text"
+              value={ingredientInput}
+              onChange={(e) => setIngredientInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addIngredient(); } }}
+              placeholder="ej. pollo, arroz..."
+              className="bg-transparent text-xs outline-none w-28 text-stone-700 placeholder-stone-400"
+            />
+            <button
+              onClick={addIngredient}
+              disabled={!ingredientInput.trim()}
+              className="text-orange-500 hover:text-orange-700 disabled:opacity-30 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          {selectedIngredients.map((ing) => (
+            <span
+              key={ing}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-orange-500 text-white"
+            >
+              {ing}
+              <button onClick={() => removeIngredient(ing)} className="hover:opacity-70 transition-opacity">
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          ))}
+          {selectedIngredients.length === 0 && (
+            <span className="text-xs text-orange-400">Añade ingredientes y te mostramos recetas que puedes hacer</span>
+          )}
+        </div>
       </div>
 
       {/* Secondary filters */}
@@ -251,7 +320,15 @@ export default function RecipeGrid({ recipes, ratingsMap = {} }: Props) {
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} rating={ratingsMap[recipe.id]} />
+            <RecipeCard
+              key={recipe.id}
+              recipe={recipe}
+              rating={ratingsMap[recipe.id]}
+              {...(selectedIngredients.length > 0 && {
+                matchCount: countIngredientMatches(recipe, selectedIngredients),
+                totalIngredients: recipe.ingredients.length,
+              })}
+            />
           ))}
         </div>
       ) : (

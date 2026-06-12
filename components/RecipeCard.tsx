@@ -7,6 +7,8 @@ import { getCategoryById } from "@/lib/data/categories";
 interface Props {
   recipe: Recipe;
   rating?: RatingStats;
+  matchCount?: number;
+  totalIngredients?: number;
 }
 
 const difficultyColor = {
@@ -15,7 +17,7 @@ const difficultyColor = {
   difícil: "bg-red-100 text-red-700",
 };
 
-export default function RecipeCard({ recipe, rating }: Props) {
+export default function RecipeCard({ recipe, rating, matchCount, totalIngredients }: Props) {
   const category = getCategoryById(recipe.category);
 
   return (
@@ -45,6 +47,23 @@ export default function RecipeCard({ recipe, rating }: Props) {
             {recipe.difficulty}
           </span>
         </div>
+        {matchCount !== undefined && totalIngredients !== undefined && (
+          <div className="absolute bottom-0 inset-x-0">
+            <div
+              className={`px-3 py-1.5 text-xs font-semibold text-white flex items-center gap-1 ${
+                matchCount === totalIngredients
+                  ? "bg-emerald-500/90"
+                  : matchCount >= totalIngredients / 2
+                  ? "bg-orange-500/90"
+                  : "bg-stone-500/80"
+              }`}
+            >
+              {matchCount === totalIngredients
+                ? "✓ Tienes todos los ingredientes"
+                : `✓ ${matchCount} de ${totalIngredients} ingredientes`}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="p-4">
