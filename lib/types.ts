@@ -80,7 +80,11 @@ export type NutritionalGoal =
   | "bajo-calorias"
   | "alto-proteina"
   | "vegano"
-  | "mediterraneo";
+  | "mediterraneo"
+  | "bajar-peso"
+  | "muscular"
+  | "diabetico"
+  | "sin-gluten";
 
 export interface MealSlot {
   day: WeekDay;
