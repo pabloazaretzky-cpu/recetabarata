@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Trash2, ShoppingBasket, ArrowLeft, CalendarDays, Shuffle } from "lucide-react";
+import { Plus, Trash2, ShoppingBasket, ArrowLeft, CalendarDays, Shuffle, Share2, Check, Download } from "lucide-react";
 import { usePlannerStore } from "@/lib/planner-store";
 import { useCartStore } from "@/lib/store";
 import { useSettingsStore } from "@/lib/settings-store";
 import { GOAL_CONFIG, filterByGoal, filterByMealType, filterByDifficulty } from "@/lib/goals";
 import { estimateProteinPerServing } from "@/lib/nutrition";
 import { estimateRecipeCost, formatPrice } from "@/lib/utils";
+import { encodePlan, decodePlan, type SharedPlan } from "@/lib/planner-share";
+import { SITE_URL } from "@/lib/seo";
 import RecipePicker from "@/components/RecipePicker";
 import { recipes as allRecipes } from "@/lib/data/recipes";
 import type { MealType, WeekDay, NutritionalGoal, Difficulty, Recipe } from "@/lib/types";
@@ -39,6 +41,17 @@ export default function PlannerPage() {
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [activeCell, setActiveCell] = useState<{ day: WeekDay; meal: MealType } | null>(null);
+  const [sharedPlan, setSharedPlan] = useState<SharedPlan | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const planParam = params.get("plan");
+    if (planParam) {
+      const decoded = decodePlan(planParam);
+      if (decoded) setSharedPlan(decoded);
+    }
+  }, []);
 
   function openPicker(day: WeekDay, meal: MealType) {
     setActiveCell({ day, meal });
@@ -64,6 +77,32 @@ export default function PlannerPage() {
         setSlot(day.id, meal.id, picked.id, defaultServings);
       }
     }
+  }
+
+  async function handleShare() {
+    if (slots.length === 0) return;
+    const encoded = encodePlan({ goal, difficulty, budget, slots });
+    const url = `${SITE_URL}/planner?plan=${encoded}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      prompt("Copia este enlace:", url);
+    }
+  }
+
+  function handleImportPlan() {
+    if (!sharedPlan) return;
+    clearAll();
+    setGoal(sharedPlan.goal);
+    setDifficulty(sharedPlan.difficulty);
+    setBudget(sharedPlan.budget);
+    for (const slot of sharedPlan.slots) {
+      setSlot(slot.day, slot.meal, slot.recipeId, slot.servings);
+    }
+    setSharedPlan(null);
+    window.history.replaceState({}, "", "/planner");
   }
 
   function handleGenerateList() {
@@ -116,6 +155,35 @@ export default function PlannerPage() {
         Volver a recetas
       </Link>
 
+      {/* Shared plan banner */}
+      {sharedPlan && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6 flex items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-blue-900 text-sm flex items-center gap-1.5">
+              <Download className="w-4 h-4" />
+              Plan compartido recibido
+            </p>
+            <p className="text-blue-600 text-xs mt-0.5">
+              {sharedPlan.slots.length} comidas · Objetivo: {GOAL_CONFIG[sharedPlan.goal].label}
+            </p>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={handleImportPlan}
+              className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-full transition-colors font-medium"
+            >
+              Importar
+            </button>
+            <button
+              onClick={() => { setSharedPlan(null); window.history.replaceState({}, "", "/planner"); }}
+              className="text-xs text-blue-500 hover:text-blue-700 transition-colors"
+            >
+              Ignorar
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="flex items-start justify-between mb-6 gap-4">
         <div>
@@ -129,11 +197,12 @@ export default function PlannerPage() {
         </div>
         <div className="flex items-center gap-2 mt-1">
           <button
-            onClick={handleRandomPlan}
-            className="flex items-center gap-1.5 text-sm bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-full transition-colors"
+            onClick={handleShare}
+            disabled={slots.length === 0}
+            className="flex items-center gap-1.5 text-sm bg-white border border-stone-200 hover:border-stone-400 disabled:opacity-40 disabled:cursor-not-allowed text-stone-700 px-3 py-1.5 rounded-full transition-colors"
           >
-            <Shuffle className="w-3.5 h-3.5" />
-            <span>Plan aleatorio</span>
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Share2 className="w-3.5 h-3.5" />}
+            <span>{copied ? "¡Copiado!" : "Compartir"}</span>
           </button>
           {slots.length > 0 && (
             <button
@@ -237,6 +306,13 @@ export default function PlannerPage() {
             </button>
           ))}
         </div>
+        <button
+          onClick={handleRandomPlan}
+          className="mt-3 flex items-center gap-1.5 text-sm bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-full transition-colors"
+        >
+          <Shuffle className="w-3.5 h-3.5" />
+          Generar plan aleatorio con estos filtros
+        </button>
       </section>
 
       {/* Week grid */}
